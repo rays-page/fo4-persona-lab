@@ -3,6 +3,7 @@ const state = {
   sessionId: null,
   currentAudio: null,
   sending: false,
+  lastRequestId: 0,
 };
 
 const personaSelect = document.getElementById("persona-select");
@@ -100,10 +101,12 @@ async function sendMessage(text) {
     await createSession();
   }
 
-  const response = await fetch("/api/chat", {
+  state.lastRequestId += 1;
+  const response = await fetch("/api/bridge/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      request_id: state.lastRequestId,
       persona_id: personaSelect.value,
       session_id: state.sessionId,
       player_name: playerNameInput.value,
@@ -116,6 +119,9 @@ async function sendMessage(text) {
   const payload = await response.json();
   if (!response.ok) {
     throw new Error(payload.error || "Request failed");
+  }
+  if (!payload.accepted) {
+    throw new Error(payload.error || `Bridge rejected request ${payload.request_id}`);
   }
 
   state.sessionId = payload.session_id;

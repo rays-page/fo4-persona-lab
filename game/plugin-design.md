@@ -2,6 +2,8 @@
 
 This document describes the target Fallout 4 mod/plugin structure for FO4 Persona Lab.
 
+For the current remaining manual tasks (NPC spawning, facegen, sound descriptor routing, lip-sync, and scene flow), use `creation-kit-worklist.md` as the execution checklist.
+
 ## Scope
 
 - Build one quest-driven bridge that can open typed conversation flow.
@@ -30,14 +32,18 @@ Create these records in your `.esp/.esm`:
 - session state (`ActiveSessionId`),
 - request correlation (`LastRequestId`),
 - submission function (`SubmitPlayerText`),
-- callback functions (`ReceiveGeneratedReply`, `ReceiveBridgeError`).
+- callback functions (`ReceiveGeneratedReply`, `ReceiveBridgeError`),
+- update-loop polling knobs (`PollIntervalSeconds`, `MaxResultsPerUpdate`).
+
+`F4RP_NativeBridge` defines the native F4SE-facing API surface used by the quest script.
 
 Native bridge target behavior:
 
 1. Papyrus calls `SubmitPlayerText`.
-2. Native bridge sends `/api/chat` request to local service.
-3. Native bridge calls back into Papyrus with reply text, session id, and optional audio path.
-4. Papyrus pushes subtitle/UI updates and optionally triggers voice playback logic.
+2. Native bridge sends `/api/bridge/chat` request to local service (including `request_id`).
+3. Papyrus polls for completed `request_id` values on a fixed update interval.
+4. Papyrus reads result fields from native and routes into `ReceiveGeneratedReply` or `ReceiveBridgeError`.
+5. Papyrus pushes subtitle/UI updates and optionally triggers voice playback logic.
 
 ## UI Options
 
@@ -49,6 +55,8 @@ Two practical approaches:
 - External overlay window:
   - Faster to ship for testing.
   - Can coexist with Fallout window and call service directly.
+
+Current prototype decision: default to external overlay (`TextInputMode = 1`) and keep Scaleform as a future implementation track.
 
 This repo ships an overlay prototype at `python -m fo4_persona_lab.overlay`.
 

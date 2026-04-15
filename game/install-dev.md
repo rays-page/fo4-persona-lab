@@ -44,8 +44,8 @@ Recommended destination pattern:
 ## 5. Validation Checklist
 
 - Quest starts and script initializes.
-- Calling `StartConversation` sets debug notifications.
-- `SubmitPlayerText` increments request id and reaches your bridge layer.
+- Calling `StartConversation` opens the selected typed-input route (external overlay by default).
+- `SubmitTypedTextFromUI` / `SubmitPlayerText` increments request id and reaches your bridge layer.
 - `ReceiveGeneratedReply` displays in notification/subtitle path.
 - `CloseConversation` clears session state.
 

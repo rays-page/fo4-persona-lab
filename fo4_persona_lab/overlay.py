@@ -5,8 +5,9 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 
+from .bridge import BridgeChatResult, BridgeGateway
 from .config import load_settings
-from .service import ChatResponse, PersonaService
+from .service import PersonaService
 
 try:
     import winsound
@@ -18,6 +19,7 @@ class OverlayApp:
     def __init__(self) -> None:
         self.settings = load_settings()
         self.service = PersonaService(self.settings)
+        self.bridge = BridgeGateway(self.service)
         self.root = tk.Tk()
         self.root.title("FO4 Persona Overlay")
         self.root.geometry("860x700")
@@ -25,10 +27,11 @@ class OverlayApp:
         self.root.attributes("-topmost", True)
 
         self.session_id: str | None = None
+        self.last_request_id = 0
         self._busy = False
         self._build_ui()
         self._load_personas()
-        self._append_system("Overlay ready. Pick a persona and start typing.")
+        self._append_system("Overlay ready (external bridge mode). Pick a persona and start typing.")
 
     def _build_ui(self) -> None:
         frame = ttk.Frame(self.root, padding=12)
@@ -165,10 +168,13 @@ class OverlayApp:
 
         self.message_var.set("")
         self._append_turn("You", text)
+        self.last_request_id += 1
+        request_id = self.last_request_id
         self._set_busy(True)
         worker = threading.Thread(
             target=self._chat_worker,
             kwargs={
+                "request_id": request_id,
                 "persona_id": persona_id,
                 "message": text,
                 "session_id": self.session_id,
@@ -182,19 +188,21 @@ class OverlayApp:
 
     def _chat_worker(
         self,
+        request_id: int,
         persona_id: str,
         message: str,
-        session_id: str,
+        session_id: str | None,
         player_name: str,
         location: str,
         speak: bool,
     ) -> None:
-        response: ChatResponse | None = None
+        response: BridgeChatResult | None = None
         error: Exception | None = None
         try:
-            response = self.service.chat(
+            response = self.bridge.submit_player_text(
+                request_id=request_id,
                 persona_id=persona_id,
-                message=message,
+                player_text=message,
                 session_id=session_id,
                 player_name=player_name,
                 location=location,
@@ -204,7 +212,7 @@ class OverlayApp:
             error = exc
         self.root.after(0, lambda: self._chat_done(response, error))
 
-    def _chat_done(self, response: ChatResponse | None, error: Exception | None) -> None:
+    def _chat_done(self, response: BridgeChatResult | None, error: Exception | None) -> None:
         self._set_busy(False)
         if error is not None:
             self._append_system(f"Chat error: {error}")
@@ -212,14 +220,24 @@ class OverlayApp:
         if response is None:
             self._append_system("Chat error: empty response.")
             return
+        if not response.accepted:
+            self._append_system(f"Bridge rejected request {response.request_id}: {response.error}")
+            return
 
         self.session_id = response.session_id
         self._refresh_session_label()
         self._append_turn("Persona", response.reply)
         for warning in response.warnings:
             self._append_system(warning)
-        if response.audio_path is not None:
-            self._play_audio(response.audio_path)
+        if response.audio_url:
+            self._play_audio_url(response.audio_url)
+
+    def _play_audio_url(self, audio_url: str) -> None:
+        if not audio_url.startswith("/audio/"):
+            self._append_system(f"Audio generated at: {audio_url}")
+            return
+        path = self.settings.audio_dir / audio_url.removeprefix("/audio/")
+        self._play_audio(path)
 
     def _play_audio(self, path) -> None:
         if winsound is None:

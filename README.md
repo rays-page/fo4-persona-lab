@@ -35,10 +35,11 @@ This project is split on purpose:
 - `POST /api/sessions`
 - `GET /api/sessions/{session_id}`
 - `POST /api/chat`
+- `POST /api/bridge/chat` (bridge-style handoff with `request_id`)
 
 ## What Still Needs Fallout 4 Mod Work
 
-- In-game typed text entry needs either a custom Scaleform menu or an external overlay bridge.
+- Decision for current prototype: use external overlay text entry now; keep Scaleform as a future immersion upgrade.
 - NPC spawning, facegen import, sound descriptors, lip-sync, and scene control still need Creation Kit work.
 - Direct Papyrus-to-HTTP calls are not available in vanilla Fallout 4, so a native bridge or overlay flow is still required.
 
@@ -108,6 +109,7 @@ This creates `persona_packs/<persona_id>/` with manifest + notes + private-refer
 
 - `game/plugin-design.md` for CK record design and bridge flow
 - `game/install-dev.md` for safe manual dev install
+- `game/creation-kit-worklist.md` for the remaining CK implementation checklist
 - `native_bridge/README.md` for F4SE bridge responsibilities
 
 ## Distribution Note

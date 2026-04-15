@@ -6,6 +6,10 @@ String Property ActiveSessionId = "" Auto Hidden
 Bool Property ConversationOpen = False Auto Hidden
 Bool Property DebugMode = True Auto
 Int Property LastRequestId = 0 Auto Hidden
+Int Property TextInputMode = 1 Auto ; 0 = Scaleform menu, 1 = external overlay (default)
+Float Property PollIntervalSeconds = 0.35 Auto
+Int Property MaxResultsPerUpdate = 2 Auto
+Bool Property SpeakReplies = True Auto
 
 Function DebugNotify(String asMessage)
 	If DebugMode
@@ -32,11 +36,38 @@ Function StartConversation(Actor akSpeaker, String asPersonaId)
 
 	ActiveSessionId = ""
 	ConversationOpen = True
-	DebugNotify("typed dialogue bridge requested for " + ActivePersonaId)
-	; Build target:
-	; 1. Open custom Scaleform menu or external overlay.
-	; 2. Capture player text entry.
-	; 3. Call SubmitPlayerText for each turn.
+	RegisterForSingleUpdate(PollIntervalSeconds)
+	DebugNotify("typed dialogue requested for " + ActivePersonaId)
+	OpenTypedInputUI()
+EndFunction
+
+Function OpenTypedInputUI()
+	If TextInputMode == 0
+		OpenScaleformTextInput()
+	Else
+		OpenExternalOverlayTextInput()
+	EndIf
+EndFunction
+
+Function OpenScaleformTextInput()
+	DebugNotify("Scaleform typed menu route selected (not implemented in source stub)")
+EndFunction
+
+Function OpenExternalOverlayTextInput()
+	Bool opened = NativeBridgeOpenExternalOverlay(ActivePersonaId, ActiveSessionId)
+	If opened
+		DebugNotify("External overlay route selected; waiting for typed input")
+	Else
+		DebugNotify("External overlay route selected, but bridge overlay hook is unavailable")
+	EndIf
+EndFunction
+
+Int Function SubmitTypedTextFromUI(String asPlayerText, String asPlayerName = "Sole Survivor", String asLocation = "The Commonwealth")
+	Int requestId = SubmitPlayerText(asPlayerText, asPlayerName, asLocation)
+	If requestId > 0
+		DebugNotify("UI handed off typed text to bridge request " + requestId)
+	EndIf
+	Return requestId
 EndFunction
 
 Int Function SubmitPlayerText(String asPlayerText, String asPlayerName = "Sole Survivor", String asLocation = "The Commonwealth")
@@ -52,13 +83,14 @@ Int Function SubmitPlayerText(String asPlayerText, String asPlayerName = "Sole S
 
 	LastRequestId += 1
 	Int requestId = LastRequestId
-	Bool accepted = NativeBridgeSendChat(
+	Bool accepted = F4RP_NativeBridge.SubmitChat(
 		requestId,
 		ActivePersonaId,
 		ActiveSessionId,
 		asPlayerText,
 		asPlayerName,
-		asLocation
+		asLocation,
+		SpeakReplies
 	)
 	If !accepted
 		DebugNotify("Native bridge is unavailable. Request " + requestId + " was not sent.")
@@ -67,22 +99,47 @@ Int Function SubmitPlayerText(String asPlayerText, String asPlayerName = "Sole S
 	Return requestId
 EndFunction
 
-Bool Function NativeBridgeSendChat(
-	Int aiRequestId,
-	String asPersonaId,
-	String asSessionId,
-	String asPlayerText,
-	String asPlayerName,
-	String asLocation
-)
+Bool Function NativeBridgeOpenExternalOverlay(String asPersonaId, String asSessionId)
 	; Source-only stub.
-	; Native F4SE bridge should:
-	; - call local service /api/chat,
-	; - return response text and optional audio path,
-	; - then call ReceiveGeneratedReply or ReceiveBridgeError.
-	Debug.Trace("F4RP: NativeBridgeSendChat stub invoked for request " + aiRequestId)
+	; Native F4SE bridge should open or focus the desktop overlay and pass persona/session context.
+	Debug.Trace("F4RP: NativeBridgeOpenExternalOverlay stub invoked for persona " + asPersonaId)
 	Return False
 EndFunction
+
+Function PumpNativeBridgeResults()
+	Int processed = 0
+	While processed < MaxResultsPerUpdate
+		Int requestId = F4RP_NativeBridge.PopCompletedRequestId()
+		If requestId < 0
+			Return
+		EndIf
+
+		Bool success = F4RP_NativeBridge.WasRequestSuccessful(requestId)
+		If success
+			ReceiveGeneratedReply(
+				requestId,
+				F4RP_NativeBridge.GetReplyText(requestId),
+				F4RP_NativeBridge.GetSessionId(requestId),
+				F4RP_NativeBridge.GetAudioPath(requestId),
+				F4RP_NativeBridge.GetWarning(requestId)
+			)
+		Else
+			ReceiveBridgeError(requestId, F4RP_NativeBridge.GetError(requestId))
+		EndIf
+
+		F4RP_NativeBridge.ReleaseResult(requestId)
+		processed += 1
+	EndWhile
+EndFunction
+
+Event OnUpdate()
+	If !ConversationOpen
+		Return
+	EndIf
+
+	PumpNativeBridgeResults()
+	RegisterForSingleUpdate(PollIntervalSeconds)
+EndEvent
 
 Function ReceiveGeneratedReply(
 	Int aiRequestId,
@@ -117,7 +174,16 @@ Function ReceiveBridgeError(Int aiRequestId, String asError)
 EndFunction
 
 Function CloseConversation()
+	UnregisterForUpdate()
+	If TextInputMode == 1
+		NativeBridgeCloseExternalOverlay()
+	EndIf
 	ConversationOpen = False
 	CurrentSpeaker = None
 	ActiveSessionId = ""
+EndFunction
+
+Function NativeBridgeCloseExternalOverlay()
+	; Source-only stub.
+	Debug.Trace("F4RP: NativeBridgeCloseExternalOverlay stub invoked.")
 EndFunction

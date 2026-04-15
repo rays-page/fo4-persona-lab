@@ -1,36 +1,73 @@
-# Native Bridge Plan (F4SE)
+# Native Bridge Skeleton (F4SE / CommonLibF4)
 
-This folder is a research and design stub only.
+This folder now contains a **real async bridge runtime skeleton** that can be dropped into an F4SE/CommonLib-backed plugin project.
 
-No F4SE SDK, binary, or compiled plugin is vendored here yet.
+## What Is Included
 
-## Purpose
+- `include/f4rp/bridge_runtime.h`
+  - request/result structs
+  - bounded request queue
+  - completed-result cache
+- `src/bridge_runtime.cpp`
+  - background worker threads
+  - WinHTTP POST to `/api/bridge/chat`
+  - non-blocking result handoff for Papyrus polling
+- `src/f4se_plugin_template.cpp`
+  - SDK-ready template showing where native Papyrus binding should happen
+- `src/smoketest_main.cpp`
+  - standalone executable to smoke test HTTP flow outside the game
+- `CMakeLists.txt`
+  - builds `f4rp_bridge_runtime` + `f4rp_bridge_smoketest`
 
-Papyrus cannot directly run arbitrary HTTP workflows for this project shape, so a native bridge is the clean long-term path.
+## Runtime Model (Optimized For Heavy Mod Lists)
 
-The bridge should expose native functions callable from `F4RP_BridgeQuestScript` and asynchronously return results back into Papyrus/UI.
+1. Papyrus calls `SubmitChat(...)` and returns immediately.
+2. Native runtime enqueues request in O(1) and wakes a worker thread.
+3. Worker posts to local service (`127.0.0.1:8765/api/bridge/chat`) via WinHTTP.
+4. Worker stores result in completed cache.
+5. Papyrus polls at fixed interval (`~0.35s` default) and processes at most N results per tick.
 
-## Responsibilities
+No network call runs on the game thread or Papyrus VM thread.
 
-1. Register Papyrus native functions for chat submission and callback routing.
-2. Receive `persona_id`, `session_id`, `player_name`, `location`, and typed message.
-3. Send HTTP requests to local FO4 Persona Lab service.
-4. Parse response (`reply`, optional `audio_url`, `warnings`, `session_id`).
-5. Call back into Papyrus:
-   - `ReceiveGeneratedReply` on success
-   - `ReceiveBridgeError` on failure/timeout
-6. Keep one non-blocking worker queue to avoid stalling game thread.
+## Papyrus Contract
 
-## Suggested Internal Contract
+`game/scripts/Source/User/F4RP_NativeBridge.psc` exposes these native globals:
 
-- Input key: `request_id` integer from Papyrus.
-- Timeout: configurable (for example, 10-20 seconds).
-- Retry: none by default; return explicit error.
-- Logging: write concise bridge logs with request id correlation.
+- `SubmitChat(...) -> Bool`
+- `PopCompletedRequestId() -> Int`
+- `WasRequestSuccessful(requestId) -> Bool`
+- `GetReplyText/GetSessionId/GetAudioPath/GetWarning/GetError`
+- `ReleaseResult(requestId)`
+- `GetQueueDepth() -> Int`
 
-## Incremental Delivery Plan
+`F4RP_BridgeQuestScript.psc` now polls the bridge asynchronously and routes results into existing callbacks:
 
-1. Loopback plugin: returns canned reply string.
-2. HTTP plugin: real call to `http://127.0.0.1:8765/api/chat`.
-3. Audio path handling: surface local path/URL and test playback.
-4. UI integration: connect callbacks to custom menu subtitles.
+- `ReceiveGeneratedReply(...)`
+- `ReceiveBridgeError(...)`
+
+## Build (Runtime + Smoke Test)
+
+```powershell
+cd C:\Users\raymo_w9whwcn\OneDrive\TT\fo4_persona_lab\native_bridge
+cmake -S . -B build
+cmake --build build --config Release
+.\build\Release\f4rp_bridge_smoketest.exe
+```
+
+## Integrating Into A Real F4SE Plugin
+
+1. Bring this runtime into your plugin project (or add this folder as a subdir).
+2. Enable and adapt `src/f4se_plugin_template.cpp` in your SDK-backed tree.
+3. Register all `F4RP_NativeBridge` functions with Papyrus VM.
+4. Ship the resulting DLL in the game's F4SE plugins folder.
+
+## Tuning Knobs
+
+`BridgeConfig` controls runtime behavior:
+
+- `worker_count` (default `2`)
+- `max_pending_requests` (default `128`)
+- `max_completed_results` (default `512`)
+- connection/send/receive timeouts
+
+For stability under load, keep Papyrus `MaxResultsPerUpdate` low (for example `1-3`) and avoid per-frame polling.

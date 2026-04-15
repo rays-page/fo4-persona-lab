@@ -5,15 +5,20 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import json
 import mimetypes
+import threading
 import traceback
 import urllib.parse
 
+from .bridge import BridgeGateway
 from .config import load_settings
 from .service import PersonaService
 
 
 SETTINGS = load_settings()
 SERVICE = PersonaService(SETTINGS)
+BRIDGE = BridgeGateway(SERVICE)
+REQUEST_ID_LOCK = threading.Lock()
+NEXT_REQUEST_ID = 1
 
 
 class ValidationError(ValueError):
@@ -63,6 +68,10 @@ class PersonaRequestHandler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/api/sessions":
             self._handle_create_session()
+            return
+
+        if parsed.path == "/api/bridge/chat":
+            self._handle_bridge_chat()
             return
 
         if parsed.path == "/api/chat":
@@ -127,6 +136,47 @@ class PersonaRequestHandler(BaseHTTPRequestHandler):
             self.log_error("%s", traceback.format_exc())
             self._send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
+    def _handle_bridge_chat(self) -> None:
+        try:
+            payload = self._read_json_body()
+            request_id = self._optional_positive_int(payload, "request_id")
+            if request_id is None:
+                request_id = self._next_request_id()
+
+            persona_id = self._required_string(payload, "persona_id", max_length=128)
+            message = self._required_string(payload, "message", max_length=4000)
+            session_id = self._optional_string(payload, "session_id", max_length=128)
+            player_name = self._optional_string(payload, "player_name", max_length=80) or "Sole Survivor"
+            location = self._optional_string(payload, "location", max_length=120) or "The Commonwealth"
+            speak = self._optional_bool(payload, "speak", default=True)
+
+            result = BRIDGE.submit_player_text(
+                request_id=request_id,
+                persona_id=persona_id,
+                player_text=message,
+                session_id=session_id,
+                player_name=player_name,
+                location=location,
+                speak=speak,
+            )
+            self._send_json(
+                {
+                    "accepted": result.accepted,
+                    "request_id": result.request_id,
+                    "session_id": result.session_id,
+                    "persona_id": result.persona_id,
+                    "reply": result.reply,
+                    "audio_url": result.audio_url,
+                    "warnings": result.warnings,
+                    "error": result.error,
+                }
+            )
+        except ValidationError as exc:
+            self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+        except Exception as exc:  # noqa: BLE001
+            self.log_error("%s", traceback.format_exc())
+            self._send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+
     def _read_json_body(self) -> dict:
         content_length = int(self.headers.get("Content-Length", "0"))
         if content_length <= 0:
@@ -169,6 +219,23 @@ class PersonaRequestHandler(BaseHTTPRequestHandler):
         if isinstance(value, bool):
             return value
         raise ValidationError(f"Field '{key}' must be a boolean.")
+
+    def _optional_positive_int(self, payload: dict, key: str) -> int | None:
+        value = payload.get(key)
+        if value is None:
+            return None
+        if not isinstance(value, int):
+            raise ValidationError(f"Field '{key}' must be an integer when provided.")
+        if value <= 0:
+            raise ValidationError(f"Field '{key}' must be greater than zero.")
+        return value
+
+    def _next_request_id(self) -> int:
+        global NEXT_REQUEST_ID
+        with REQUEST_ID_LOCK:
+            request_id = NEXT_REQUEST_ID
+            NEXT_REQUEST_ID += 1
+        return request_id
 
     def _serve_web_asset(self, raw_path: str) -> None:
         normalized = raw_path.strip("/") or "index.html"

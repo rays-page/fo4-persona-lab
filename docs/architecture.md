@@ -47,6 +47,7 @@ Responsibilities:
 Temporary practical bridge:
 
 - a desktop overlay client can run beside Fallout and call the service directly while native integration is still in progress.
+- this repo now treats that external overlay path as the default typed-input route for the prototype.
 
 ## Hard Engine Constraint
 
