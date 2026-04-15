@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FO4 Persona Lab</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="panel panel--controls">
+      <div class="eyebrow">Fallout 4 Persona Interface</div>
+      <h1>Typed Dialogue Prototype</h1>
+      <p class="lead">Pick a persona, type into the terminal, and hear the reply.</p>
+
+      <label class="field">
+        <span>Persona</span>
+        <select id="persona-select"></select>
+      </label>
+
+      <label class="field">
+        <span>Player Name</span>
+        <input id="player-name" type="text" value="Sole Survivor">
+      </label>
+
+      <label class="field">
+        <span>Location</span>
+        <input id="location" type="text" value="Diamond City">
+      </label>
+
+      <label class="toggle">
+        <input id="speak-toggle" type="checkbox" checked>
+        <span>Generate voiced reply</span>
+      </label>
+    </section>
+
+    <section class="panel panel--chat">
+      <div id="chat-log" class="chat-log"></div>
+      <form id="chat-form" class="composer">
+        <textarea id="message" rows="4" placeholder="Type what you want to say..."></textarea>
+        <button type="submit">Transmit</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

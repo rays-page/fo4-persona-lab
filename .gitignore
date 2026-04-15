@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.venv/
+venv/
+
+data/audio/
+data/sessions/
+
+.pytest_cache/
+.mypy_cache/
