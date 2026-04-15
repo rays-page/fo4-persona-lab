@@ -36,9 +36,12 @@ No network call runs on the game thread or Papyrus VM thread.
 - `SubmitChat(...) -> Bool`
 - `PopCompletedRequestId() -> Int`
 - `WasRequestSuccessful(requestId) -> Bool`
-- `GetReplyText/GetSessionId/GetAudioPath/GetWarning/GetError`
+- `GetReplyText/GetSessionId/GetAudioFilePath/GetWarning/GetError`
 - `ReleaseResult(requestId)`
 - `GetQueueDepth() -> Int`
+
+Bridge responses now use one audio field for game integration: `audio_file_path`.
+`audio_url` is still used by the browser/overlay API path, but not by the Papyrus bridge contract.
 
 `F4RP_BridgeQuestScript.psc` now polls the bridge asynchronously and routes results into existing callbacks:
 

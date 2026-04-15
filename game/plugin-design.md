@@ -45,6 +45,8 @@ Native bridge target behavior:
 4. Papyrus reads result fields from native and routes into `ReceiveGeneratedReply` or `ReceiveBridgeError`.
 5. Papyrus pushes subtitle/UI updates and optionally triggers voice playback logic.
 
+Game-facing audio contract: consume `audio_file_path` (filesystem path), not URL fields.
+
 ## UI Options
 
 Two practical approaches:
