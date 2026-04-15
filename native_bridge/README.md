@@ -47,6 +47,17 @@ No network call runs on the game thread or Papyrus VM thread.
 
 ## Build (Runtime + Smoke Test)
 
+### No CMake Path (Current Recommended)
+
+```powershell
+cd C:\Users\raymo_w9whwcn\OneDrive\TT\fo4_persona_lab
+powershell -ExecutionPolicy Bypass -File .\native_bridge\build_smoketest.ps1 -RunSmoke
+```
+
+This path uses `g++` directly and verifies end-to-end flow against the local Python service.
+
+### CMake Path (Optional)
+
 ```powershell
 cd C:\Users\raymo_w9whwcn\OneDrive\TT\fo4_persona_lab\native_bridge
 cmake -S . -B build
