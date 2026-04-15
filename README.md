@@ -70,6 +70,12 @@ Optional TTS path test:
 python .\tools\smoke_check.py --test-tts
 ```
 
+Bridge endpoint soak test (short multithreaded load):
+
+```powershell
+python .\tools\bridge_soak_test.py
+```
+
 ## Optional Environment Variables
 
 ```powershell
