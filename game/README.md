@@ -1,15 +1,14 @@
 # Fallout 4 Integration Notes
 
-The files in `scripts/` are source stubs only.
+The files in `scripts/` are source-only stubs for the future in-game bridge.
 
-They define the shape of the future mod side:
+This folder now includes:
 
-- a quest-level bridge script,
-- a target speaker reference,
-- a function that starts the typed conversation flow,
-- and a place to receive generated dialogue back from an external bridge.
+- `scripts/Source/User/F4RP_BridgeQuestScript.psc`: quest-level bridge contract
+- `plugin-design.md`: Creation Kit record design and runtime flow
+- `install-dev.md`: manual developer install path (source only, no automation)
 
-This project does not yet include:
+Still intentionally missing:
 
 - a Creation Kit plugin,
 - a compiled F4SE native plugin,

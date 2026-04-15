@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 
 from .backends import DialogueBackend, OpenAIChatBackend, RuleBasedBackend
 from .config import Settings
 from .memory import ConversationStore
-from .models import Persona, load_personas
+from .models import Persona, SessionTranscript, load_personas
 from .prompting import build_system_prompt
 from .tts import NullSpeechBackend, OpenAISpeechBackend, SapiSpeechBackend, SpeechBackend
 
@@ -17,6 +18,8 @@ class ChatResponse:
     persona_id: str
     reply: str
     audio_url: str | None
+    audio_path: Path | None
+    warnings: list[str]
 
 
 class PersonaService:
@@ -24,6 +27,7 @@ class PersonaService:
         self.settings = settings
         self.personas = load_personas(settings.personas_dir)
         self.store = ConversationStore(settings.sessions_dir)
+        self.rule_fallback_backend = RuleBasedBackend()
         self.dialogue_backend = self._build_dialogue_backend()
         self.speech_backend = self._build_speech_backend()
 
@@ -34,16 +38,38 @@ class PersonaService:
                 "display_name": persona.display_name,
                 "short_bio": persona.short_bio,
                 "fallout_hook": persona.fallout_hook,
+                "fallout_role": persona.fallout_role,
                 "appearance_cues": persona.appearance_cues,
             }
             for persona in self.personas.values()
         ]
+
+    def get_persona_summary(self, persona_id: str) -> dict:
+        persona = self.get_persona(persona_id)
+        return persona.to_json()
 
     def get_persona(self, persona_id: str) -> Persona:
         try:
             return self.personas[persona_id]
         except KeyError as exc:
             raise KeyError(f"Unknown persona_id: {persona_id}") from exc
+
+    def create_session(self, persona_id: str) -> SessionTranscript:
+        self.get_persona(persona_id)
+        return self.store.create(persona_id)
+
+    def get_session(self, session_id: str) -> SessionTranscript:
+        transcript = self.store.load(session_id)
+        if transcript is None:
+            raise KeyError(f"Unknown session_id: {session_id}")
+        return transcript
+
+    def session_payload(self, session_id: str) -> dict:
+        transcript = self.get_session(session_id)
+        persona = self.get_persona(transcript.persona_id)
+        payload = transcript.to_json()
+        payload["persona_display_name"] = persona.display_name
+        return payload
 
     def chat(
         self,
@@ -57,15 +83,31 @@ class PersonaService:
         persona = self.get_persona(persona_id)
         session = self.store.ensure(persona_id, session_id)
         history = self.store.recent_turns(session, limit=12)
-        system_prompt = build_system_prompt(persona, player_name, location, history)
+        system_prompt = build_system_prompt(
+            persona=persona,
+            player_name=player_name,
+            location=location,
+            recent_history=history,
+            memory_summary=session.memory_summary,
+        )
+        warnings: list[str] = []
 
         self.store.append_turn(session, "user", message)
-        reply = self.dialogue_backend.generate_reply(system_prompt, history, message, persona)
+        try:
+            reply = self.dialogue_backend.generate_reply(system_prompt, history, message, persona)
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"Primary dialogue backend failed; used local fallback. Details: {exc}")
+            reply = self.rule_fallback_backend.generate_reply(system_prompt, history, message, persona)
         self.store.append_turn(session, "assistant", reply)
+        self._refresh_memory_summary(session)
 
         audio_url: str | None = None
+        audio_path: Path | None = None
         if speak:
-            audio_path = self.speech_backend.synthesize(reply, persona, session.session_id)
+            try:
+                audio_path = self.speech_backend.synthesize(reply, persona, session.session_id)
+            except Exception as exc:  # noqa: BLE001
+                warnings.append(f"TTS failed; returned text only. Details: {exc}")
             if audio_path is not None:
                 audio_url = self._audio_url(audio_path)
 
@@ -74,10 +116,37 @@ class PersonaService:
             persona_id=persona.persona_id,
             reply=reply,
             audio_url=audio_url,
+            audio_path=audio_path,
+            warnings=warnings,
         )
 
     def _audio_url(self, path: Path) -> str:
         return f"/audio/{path.name}"
+
+    def _refresh_memory_summary(self, session: SessionTranscript) -> None:
+        user_turns = [turn.text for turn in session.turns if turn.role == "user"]
+        if not user_turns:
+            return
+
+        snippets: list[str] = []
+        seen: set[str] = set()
+        for raw in user_turns[-8:]:
+            normalized = re.sub(r"\s+", " ", raw).strip()
+            if not normalized:
+                continue
+            short = normalized[:160].rstrip(" .!?")
+            key = short.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            snippets.append(short)
+
+        if not snippets:
+            return
+
+        summary = "Player priorities so far: " + "; ".join(snippets[:5]) + "."
+        if summary != session.memory_summary:
+            self.store.update_memory_summary(session, summary)
 
     def _build_dialogue_backend(self) -> DialogueBackend:
         if self.settings.backend == "openai":
@@ -87,7 +156,7 @@ class PersonaService:
                 api_key=self.settings.openai_api_key,
                 model=self.settings.openai_chat_model,
             )
-        return RuleBasedBackend()
+        return self.rule_fallback_backend
 
     def _build_speech_backend(self) -> SpeechBackend:
         if self.settings.tts_backend == "none":

@@ -9,5 +9,19 @@ venv/
 data/audio/
 data/sessions/
 
+persona_packs/*/references/*
+!persona_packs/*/references/README.md
+persona_packs/*/audio/*
+!persona_packs/*/audio/README.md
+persona_packs/*/*.wav
+persona_packs/*/*.mp3
+persona_packs/*/*.flac
+persona_packs/*/*.png
+persona_packs/*/*.jpg
+persona_packs/*/*.jpeg
+persona_packs/*/*.webp
+persona_packs/*/*.tif
+persona_packs/*/*.tiff
+
 .pytest_cache/
 .mypy_cache/

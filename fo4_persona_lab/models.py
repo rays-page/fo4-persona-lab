@@ -20,6 +20,12 @@ class VoiceProfile:
 
 
 @dataclass
+class ConversationExample:
+    user: str
+    assistant: str
+
+
+@dataclass
 class Persona:
     persona_id: str
     display_name: str
@@ -30,12 +36,27 @@ class Persona:
     appearance_cues: list[str] = field(default_factory=list)
     relationship_seed: str = ""
     guardrails: list[str] = field(default_factory=list)
+    goals: list[str] = field(default_factory=list)
+    dislikes: list[str] = field(default_factory=list)
+    worldview: str = ""
+    fallout_role: str = ""
+    conversation_examples: list[ConversationExample] = field(default_factory=list)
     voice: VoiceProfile = field(default_factory=VoiceProfile)
 
     @classmethod
     def from_json(cls, path: Path) -> "Persona":
         payload = json.loads(path.read_text(encoding="utf-8"))
         voice_payload = payload.get("voice") or {}
+        example_payloads = payload.get("conversation_examples", [])
+        examples: list[ConversationExample] = []
+        for item in example_payloads:
+            if not isinstance(item, dict):
+                continue
+            user = str(item.get("user", "")).strip()
+            assistant = str(item.get("assistant", "")).strip()
+            if user and assistant:
+                examples.append(ConversationExample(user=user, assistant=assistant))
+
         return cls(
             persona_id=payload["persona_id"],
             display_name=payload["display_name"],
@@ -46,6 +67,11 @@ class Persona:
             appearance_cues=list(payload.get("appearance_cues", [])),
             relationship_seed=payload.get("relationship_seed", ""),
             guardrails=list(payload.get("guardrails", [])),
+            goals=list(payload.get("goals", [])),
+            dislikes=list(payload.get("dislikes", [])),
+            worldview=payload.get("worldview", ""),
+            fallout_role=payload.get("fallout_role", ""),
+            conversation_examples=examples,
             voice=VoiceProfile(
                 mode=voice_payload.get("mode", "sapi"),
                 voice_name=voice_payload.get("voice_name"),
@@ -73,6 +99,7 @@ class SessionTranscript:
     turns: list[Turn] = field(default_factory=list)
     created_at: str = ""
     updated_at: str = ""
+    memory_summary: str = ""
 
     @classmethod
     def from_json(cls, payload: dict) -> "SessionTranscript":
@@ -81,6 +108,7 @@ class SessionTranscript:
             persona_id=payload["persona_id"],
             created_at=payload.get("created_at", ""),
             updated_at=payload.get("updated_at", ""),
+            memory_summary=payload.get("memory_summary", ""),
             turns=[Turn(**turn) for turn in payload.get("turns", [])],
         )
 
@@ -90,6 +118,7 @@ class SessionTranscript:
             "persona_id": self.persona_id,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
+            "memory_summary": self.memory_summary,
             "turns": [asdict(turn) for turn in self.turns],
         }
 
@@ -97,6 +126,9 @@ class SessionTranscript:
 def load_personas(personas_dir: Path) -> dict[str, Persona]:
     personas: dict[str, Persona] = {}
     for path in sorted(personas_dir.glob("*.json")):
-        persona = Persona.from_json(path)
+        try:
+            persona = Persona.from_json(path)
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(f"Failed loading persona file {path.name}: {exc}") from exc
         personas[persona.persona_id] = persona
     return personas

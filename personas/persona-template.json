@@ -17,6 +17,20 @@
     "Distinctive clothing notes"
   ],
   "relationship_seed": "How they first relate to the player character.",
+  "goals": [
+    "What they are trying to build, protect, or prove in the Commonwealth."
+  ],
+  "dislikes": [
+    "Habits, systems, or outcomes they reject."
+  ],
+  "worldview": "How this person interprets people, institutions, and survival after the bombs.",
+  "fallout_role": "Their practical role in the world (scientist, negotiator, engineer, strategist, etc.).",
+  "conversation_examples": [
+    {
+      "user": "Give one concise player prompt that fits this persona.",
+      "assistant": "Provide one concise in-character response."
+    }
+  ],
   "guardrails": [
     "Do not claim private knowledge or secret relationships.",
     "If asked about unknown facts, say you do not know."

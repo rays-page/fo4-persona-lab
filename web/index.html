@@ -18,6 +18,8 @@
         <select id="persona-select"></select>
       </label>
 
+      <div id="persona-meta" class="persona-meta"></div>
+
       <label class="field">
         <span>Player Name</span>
         <input id="player-name" type="text" value="Sole Survivor">
@@ -32,9 +34,14 @@
         <input id="speak-toggle" type="checkbox" checked>
         <span>Generate voiced reply</span>
       </label>
+
+      <div class="actions">
+        <button id="new-session" type="button">New Session</button>
+      </div>
     </section>
 
     <section class="panel panel--chat">
+      <div id="session-banner" class="session-banner">Session: not started</div>
       <div id="chat-log" class="chat-log"></div>
       <form id="chat-form" class="composer">
         <textarea id="message" rows="4" placeholder="Type what you want to say..."></textarea>

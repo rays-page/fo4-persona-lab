@@ -45,7 +45,7 @@ body {
 
 .panel--chat {
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: auto 1fr auto;
   min-height: 78vh;
 }
 
@@ -65,6 +65,17 @@ h1 {
 .lead {
   margin: 0 0 24px;
   color: var(--muted);
+}
+
+.persona-meta {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--muted);
+  padding: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  margin-bottom: 16px;
 }
 
 .field {
@@ -104,6 +115,11 @@ button {
   letter-spacing: 0.08em;
 }
 
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .toggle {
   display: flex;
   align-items: center;
@@ -112,6 +128,19 @@ button {
 
 .toggle input {
   width: auto;
+}
+
+.actions {
+  margin-top: 16px;
+}
+
+.session-banner {
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 12px 24px;
 }
 
 .chat-log {
@@ -144,6 +173,14 @@ button {
 
 .message--assistant .message__badge {
   color: var(--accent);
+}
+
+.message--system .message__badge {
+  color: #ffd68b;
+}
+
+.message--system {
+  border-style: dashed;
 }
 
 .composer {

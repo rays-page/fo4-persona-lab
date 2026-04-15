@@ -3,6 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 import argparse
 import json
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from fo4_persona_lab.models import slugify
 
@@ -24,13 +29,27 @@ def build_manifest(name: str) -> dict:
             "Add face, hair, clothing, and posture notes.",
         ],
         "relationship_seed": "How they relate to the Sole Survivor.",
+        "goals": [
+            "What this person is trying to build or protect in the Commonwealth.",
+        ],
+        "dislikes": [
+            "Behaviors or outcomes they reject.",
+        ],
+        "worldview": "How they interpret people, institutions, and survival in Fallout's world.",
+        "fallout_role": "Their practical role in the Commonwealth (scientist, fixer, tactician, etc.).",
+        "conversation_examples": [
+            {
+                "user": "Give one concise tactical question the player might ask.",
+                "assistant": "Provide a short in-character answer that reflects this persona's voice.",
+            }
+        ],
         "guardrails": [
             "Do not invent private facts.",
             "Admit uncertainty when needed."
         ],
         "voice": {
             "mode": "sapi",
-            "voice_name": null,
+            "voice_name": None,
             "prompt": "Natural, grounded, cinematic."
         },
     }

@@ -1,6 +1,12 @@
 # FO4 Persona Lab
 
-Prototype scaffold for a Fallout 4 mod that lets you drop a real person into the Commonwealth, chat with them in a typed interface, and hear voiced replies.
+Working prototype for a Fallout 4 real-person NPC mod pipeline:
+
+- local dialogue service,
+- typed web client,
+- desktop overlay client,
+- persona pack tooling,
+- and a source-level Fallout bridge contract.
 
 This project is split on purpose:
 
@@ -9,16 +15,26 @@ This project is split on purpose:
 - `game/` holds Fallout-side source stubs and notes for the later Creation Kit and F4SE bridge.
 - `docs/` explains the architecture and the hard engine limitations.
 
-## What Works In This Scaffold
+## What Works Right Now
 
 - Load persona manifests from JSON.
-- Keep per-session conversation memory on disk.
-- Generate fallback dialogue locally with a rule-based backend.
+- Keep per-session conversation memory and rolling summaries on disk.
+- Generate fallback dialogue locally with a persona-aware rule-based backend.
 - Optionally call an OpenAI chat model if `OPENAI_API_KEY` is present.
 - Optionally synthesize speech with:
   - built-in Windows SAPI voices, or
   - OpenAI text-to-speech if `OPENAI_API_KEY` is present.
 - Serve a Fallout-style local web UI for typed conversations.
+- Run a desktop always-on-top overlay client beside the game.
+- Surface warnings when backend/TTS fail without dropping text replies.
+
+## API Endpoints
+
+- `GET /api/personas`
+- `GET /api/personas/{persona_id}`
+- `POST /api/sessions`
+- `GET /api/sessions/{session_id}`
+- `POST /api/chat`
 
 ## What Still Needs Fallout 4 Mod Work
 
@@ -34,6 +50,24 @@ python -m fo4_persona_lab.server
 ```
 
 Then open `http://127.0.0.1:8765`.
+
+Optional overlay:
+
+```powershell
+python -m fo4_persona_lab.overlay
+```
+
+## Smoke Check
+
+```powershell
+python .\tools\smoke_check.py
+```
+
+Optional TTS path test:
+
+```powershell
+python .\tools\smoke_check.py --test-tts
+```
 
 ## Optional Environment Variables
 
@@ -61,6 +95,20 @@ python .\tools\create_persona_manifest.py "Carl Sagan"
 ```
 
 Then edit the new JSON file in `personas/`.
+
+Create a full persona pack scaffold:
+
+```powershell
+python .\tools\create_persona_pack.py "Carl Sagan"
+```
+
+This creates `persona_packs/<persona_id>/` with manifest + notes + private-reference placeholders.
+
+## Fallout Integration Docs
+
+- `game/plugin-design.md` for CK record design and bridge flow
+- `game/install-dev.md` for safe manual dev install
+- `native_bridge/README.md` for F4SE bridge responsibilities
 
 ## Distribution Note
 

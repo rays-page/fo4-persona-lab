@@ -27,10 +27,10 @@ This project provides that layer now.
 Responsibilities:
 
 - build the persona prompt,
-- hold session memory,
+- hold session memory and rolling memory summaries,
 - call the dialogue model,
 - call TTS,
-- return reply text and an audio file.
+- return reply text, warnings, and optional audio file.
 
 ### 3. Fallout 4 Mod Layer
 
@@ -43,6 +43,10 @@ Responsibilities:
 - forward the player text to the service,
 - receive reply text and audio,
 - drive subtitles, talk idles, and sound playback.
+
+Temporary practical bridge:
+
+- a desktop overlay client can run beside Fallout and call the service directly while native integration is still in progress.
 
 ## Hard Engine Constraint
 

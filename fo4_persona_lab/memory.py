@@ -49,6 +49,11 @@ class ConversationStore:
         if session_id:
             existing = self.load(session_id)
             if existing is not None:
+                if existing.persona_id != persona_id:
+                    raise ValueError(
+                        f"Session {session_id} belongs to persona "
+                        f"{existing.persona_id}, not {persona_id}."
+                    )
                 return existing
         return self.create(persona_id)
 
@@ -58,3 +63,7 @@ class ConversationStore:
 
     def recent_turns(self, session: SessionTranscript, limit: int = 10) -> list[Turn]:
         return session.turns[-limit:]
+
+    def update_memory_summary(self, session: SessionTranscript, summary: str) -> None:
+        session.memory_summary = summary.strip()
+        self.save(session)
