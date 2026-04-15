@@ -41,7 +41,7 @@ struct ChatResult {
     bool success = false;
     std::string reply_text;
     std::string session_id;
-    std::string audio_path;
+    std::string audio_file_path;
     std::string warning;
     std::string error;
 };

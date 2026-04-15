@@ -12,7 +12,7 @@ class BridgeChatResult:
     session_id: str | None = None
     persona_id: str | None = None
     reply: str = ""
-    audio_url: str | None = None
+    audio_file_path: str | None = None
     warnings: list[str] = field(default_factory=list)
     error: str = ""
 
@@ -68,6 +68,6 @@ class BridgeGateway:
             session_id=response.session_id,
             persona_id=response.persona_id,
             reply=response.reply,
-            audio_url=response.audio_url,
+            audio_file_path=str(response.audio_file_path) if response.audio_file_path is not None else None,
             warnings=response.warnings,
         )

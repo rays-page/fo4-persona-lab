@@ -174,6 +174,83 @@ std::optional<std::size_t> FindValueOffset(std::string_view json, std::string_vi
     return value_pos;
 }
 
+void AppendUtf8CodePoint(std::string& out, std::uint32_t code_point) {
+    if (code_point <= 0x7F) {
+        out.push_back(static_cast<char>(code_point));
+        return;
+    }
+
+    if (code_point <= 0x7FF) {
+        out.push_back(static_cast<char>(0xC0 | ((code_point >> 6) & 0x1F)));
+        out.push_back(static_cast<char>(0x80 | (code_point & 0x3F)));
+        return;
+    }
+
+    if (code_point <= 0xFFFF) {
+        out.push_back(static_cast<char>(0xE0 | ((code_point >> 12) & 0x0F)));
+        out.push_back(static_cast<char>(0x80 | ((code_point >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (code_point & 0x3F)));
+        return;
+    }
+
+    if (code_point <= 0x10FFFF) {
+        out.push_back(static_cast<char>(0xF0 | ((code_point >> 18) & 0x07)));
+        out.push_back(static_cast<char>(0x80 | ((code_point >> 12) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | ((code_point >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (code_point & 0x3F)));
+        return;
+    }
+
+    out.push_back('?');
+}
+
+std::optional<std::uint32_t> ParseHexCodeUnit(std::string_view json, std::size_t& offset) {
+    if (offset + 4 > json.size()) {
+        return std::nullopt;
+    }
+
+    unsigned int code_unit = 0;
+    const auto* start = json.data() + offset;
+    const auto* end = start + 4;
+    const auto parsed = std::from_chars(start, end, code_unit, 16);
+    if (parsed.ec != std::errc{} || parsed.ptr != end) {
+        return std::nullopt;
+    }
+
+    offset += 4;
+    return static_cast<std::uint32_t>(code_unit);
+}
+
+std::optional<std::uint32_t> ParseEscapedCodePoint(std::string_view json, std::size_t& offset) {
+    const auto first_unit = ParseHexCodeUnit(json, offset);
+    if (!first_unit.has_value()) {
+        return std::nullopt;
+    }
+
+    const std::uint32_t lead = *first_unit;
+    if (lead >= 0xD800 && lead <= 0xDBFF) {
+        if (offset + 6 > json.size() || json[offset] != '\\' || json[offset + 1] != 'u') {
+            return std::nullopt;
+        }
+        offset += 2;
+        const auto second_unit = ParseHexCodeUnit(json, offset);
+        if (!second_unit.has_value()) {
+            return std::nullopt;
+        }
+        const std::uint32_t trail = *second_unit;
+        if (trail < 0xDC00 || trail > 0xDFFF) {
+            return std::nullopt;
+        }
+        return 0x10000 + (((lead - 0xD800) << 10) | (trail - 0xDC00));
+    }
+
+    if (lead >= 0xDC00 && lead <= 0xDFFF) {
+        return std::nullopt;
+    }
+
+    return lead;
+}
+
 std::optional<std::pair<std::string, std::size_t>> ParseJsonStringWithEnd(std::string_view json, std::size_t offset) {
     if (offset >= json.size() || json[offset] != '"') {
         return std::nullopt;
@@ -225,24 +302,11 @@ std::optional<std::pair<std::string, std::size_t>> ParseJsonStringWithEnd(std::s
             out.push_back('\t');
             break;
         case 'u': {
-            if (offset + 4 > json.size()) {
+            const auto code_point = ParseEscapedCodePoint(json, offset);
+            if (!code_point.has_value()) {
                 return std::nullopt;
             }
-
-            unsigned int code_point = 0;
-            const auto* start = json.data() + offset;
-            const auto* end = start + 4;
-            const auto parsed = std::from_chars(start, end, code_point, 16);
-            if (parsed.ec != std::errc{}) {
-                return std::nullopt;
-            }
-
-            offset += 4;
-            if (code_point <= 0x7F) {
-                out.push_back(static_cast<char>(code_point));
-            } else {
-                out.push_back('?');
-            }
+            AppendUtf8CodePoint(out, *code_point);
             break;
         }
         default:
@@ -695,7 +759,10 @@ ChatResult BridgeRuntime::ProcessRequest(HttpClient& client, const ChatRequest& 
 
     result.reply_text = FindJsonString(response.body, "reply").value_or("");
     result.session_id = FindJsonString(response.body, "session_id").value_or("");
-    result.audio_path = FindJsonString(response.body, "audio_url").value_or("");
+    result.audio_file_path = FindJsonString(response.body, "audio_file_path").value_or("");
+    if (result.audio_file_path.empty()) {
+        result.audio_file_path = FindJsonString(response.body, "audio_url").value_or("");
+    }
 
     const std::vector<std::string> warnings = FindJsonStringArray(response.body, "warnings");
     result.warning = JoinStrings(warnings, "; ");

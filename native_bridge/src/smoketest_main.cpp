@@ -45,8 +45,8 @@ int main(int argc, char** argv) {
                 if (!result.session_id.empty()) {
                     std::cout << "Session: " << result.session_id << "\n";
                 }
-                if (!result.audio_path.empty()) {
-                    std::cout << "Audio: " << result.audio_path << "\n";
+                if (!result.audio_file_path.empty()) {
+                    std::cout << "Audio file path: " << result.audio_file_path << "\n";
                 }
                 if (!result.warning.empty()) {
                     std::cout << "Warning: " << result.warning << "\n";

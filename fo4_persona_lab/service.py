@@ -18,7 +18,7 @@ class ChatResponse:
     persona_id: str
     reply: str
     audio_url: str | None
-    audio_path: Path | None
+    audio_file_path: Path | None
     warnings: list[str]
 
 
@@ -82,41 +82,43 @@ class PersonaService:
     ) -> ChatResponse:
         persona = self.get_persona(persona_id)
         session = self.store.ensure(persona_id, session_id)
-        history = self.store.recent_turns(session, limit=12)
-        system_prompt = build_system_prompt(
-            persona=persona,
-            player_name=player_name,
-            location=location,
-            recent_history=history,
-            memory_summary=session.memory_summary,
-        )
-        warnings: list[str] = []
+        with self.store.locked_session(session.session_id):
+            session = self.get_session(session.session_id)
+            history = self.store.recent_turns(session, limit=12)
+            system_prompt = build_system_prompt(
+                persona=persona,
+                player_name=player_name,
+                location=location,
+                recent_history=history,
+                memory_summary=session.memory_summary,
+            )
+            warnings: list[str] = []
 
-        self.store.append_turn(session, "user", message)
-        try:
-            reply = self.dialogue_backend.generate_reply(system_prompt, history, message, persona)
-        except Exception as exc:  # noqa: BLE001
-            warnings.append(f"Primary dialogue backend failed; used local fallback. Details: {exc}")
-            reply = self.rule_fallback_backend.generate_reply(system_prompt, history, message, persona)
-        self.store.append_turn(session, "assistant", reply)
-        self._refresh_memory_summary(session)
-
-        audio_url: str | None = None
-        audio_path: Path | None = None
-        if speak:
+            self.store.append_turn(session, "user", message)
             try:
-                audio_path = self.speech_backend.synthesize(reply, persona, session.session_id)
+                reply = self.dialogue_backend.generate_reply(system_prompt, history, message, persona)
             except Exception as exc:  # noqa: BLE001
-                warnings.append(f"TTS failed; returned text only. Details: {exc}")
-            if audio_path is not None:
-                audio_url = self._audio_url(audio_path)
+                warnings.append(f"Primary dialogue backend failed; used local fallback. Details: {exc}")
+                reply = self.rule_fallback_backend.generate_reply(system_prompt, history, message, persona)
+            self.store.append_turn(session, "assistant", reply)
+            self._refresh_memory_summary(session)
+
+            audio_url: str | None = None
+            audio_file_path: Path | None = None
+            if speak:
+                try:
+                    audio_file_path = self.speech_backend.synthesize(reply, persona, session.session_id)
+                except Exception as exc:  # noqa: BLE001
+                    warnings.append(f"TTS failed; returned text only. Details: {exc}")
+                if audio_file_path is not None:
+                    audio_url = self._audio_url(audio_file_path)
 
         return ChatResponse(
             session_id=session.session_id,
             persona_id=persona.persona_id,
             reply=reply,
             audio_url=audio_url,
-            audio_path=audio_path,
+            audio_file_path=audio_file_path,
             warnings=warnings,
         )
 

@@ -59,7 +59,7 @@ class PersonaRequestHandler(BaseHTTPRequestHandler):
             return
 
         if path.startswith("/audio/"):
-            self._serve_file(SETTINGS.audio_dir / path.removeprefix("/audio/"))
+            self._serve_audio_asset(path)
             return
 
         self._serve_web_asset(path)
@@ -166,7 +166,7 @@ class PersonaRequestHandler(BaseHTTPRequestHandler):
                     "session_id": result.session_id,
                     "persona_id": result.persona_id,
                     "reply": result.reply,
-                    "audio_url": result.audio_url,
+                    "audio_file_path": result.audio_file_path,
                     "warnings": result.warnings,
                     "error": result.error,
                 }
@@ -249,6 +249,20 @@ class PersonaRequestHandler(BaseHTTPRequestHandler):
 
         if not target.exists():
             target = SETTINGS.web_dir / "index.html"
+
+        self._serve_file(target)
+
+    def _serve_audio_asset(self, raw_path: str) -> None:
+        normalized = urllib.parse.unquote(raw_path.removeprefix("/audio/")).lstrip("/")
+        if not normalized:
+            self._send_json({"error": "Missing audio path"}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        audio_root = SETTINGS.audio_dir.resolve()
+        target = (audio_root / normalized).resolve()
+        if audio_root not in target.parents:
+            self._send_json({"error": "Invalid path"}, status=HTTPStatus.BAD_REQUEST)
+            return
 
         self._serve_file(target)
 

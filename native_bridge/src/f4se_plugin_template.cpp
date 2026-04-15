@@ -59,9 +59,9 @@ std::string GetSessionId(std::int32_t request_id) {
     return Runtime().PeekResult(request_id, result) ? result.session_id : "";
 }
 
-std::string GetAudioPath(std::int32_t request_id) {
+std::string GetAudioFilePath(std::int32_t request_id) {
     f4rp::ChatResult result;
-    return Runtime().PeekResult(request_id, result) ? result.audio_path : "";
+    return Runtime().PeekResult(request_id, result) ? result.audio_file_path : "";
 }
 
 std::string GetWarning(std::int32_t request_id) {
@@ -90,7 +90,7 @@ bool BindPapyrus(RE::BSScript::IVirtualMachine* vm) {
     // - WasRequestSuccessful
     // - GetReplyText
     // - GetSessionId
-    // - GetAudioPath
+    // - GetAudioFilePath
     // - GetWarning
     // - GetError
     // - ReleaseResult

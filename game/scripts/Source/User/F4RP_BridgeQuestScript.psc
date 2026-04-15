@@ -120,7 +120,7 @@ Function PumpNativeBridgeResults()
 				requestId,
 				F4RP_NativeBridge.GetReplyText(requestId),
 				F4RP_NativeBridge.GetSessionId(requestId),
-				F4RP_NativeBridge.GetAudioPath(requestId),
+				F4RP_NativeBridge.GetAudioFilePath(requestId),
 				F4RP_NativeBridge.GetWarning(requestId)
 			)
 		Else
@@ -145,7 +145,7 @@ Function ReceiveGeneratedReply(
 	Int aiRequestId,
 	String asReplyText,
 	String asSessionId = "",
-	String asAudioPath = "",
+	String asAudioFilePath = "",
 	String asWarning = ""
 )
 	If !ConversationOpen
@@ -166,7 +166,7 @@ Function ReceiveGeneratedReply(
 	; Build target:
 	; - Push subtitle text into custom menu.
 	; - Trigger talk idle on CurrentSpeaker.
-	; - Route asAudioPath through sound descriptor or native playback.
+	; - Route asAudioFilePath through sound descriptor or native playback.
 EndFunction
 
 Function ReceiveBridgeError(Int aiRequestId, String asError)

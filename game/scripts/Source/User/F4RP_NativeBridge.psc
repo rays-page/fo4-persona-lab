@@ -14,7 +14,7 @@ Int Function PopCompletedRequestId() Global Native
 Bool Function WasRequestSuccessful(Int aiRequestId) Global Native
 String Function GetReplyText(Int aiRequestId) Global Native
 String Function GetSessionId(Int aiRequestId) Global Native
-String Function GetAudioPath(Int aiRequestId) Global Native
+String Function GetAudioFilePath(Int aiRequestId) Global Native
 String Function GetWarning(Int aiRequestId) Global Native
 String Function GetError(Int aiRequestId) Global Native
 Function ReleaseResult(Int aiRequestId) Global Native
