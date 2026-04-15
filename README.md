@@ -30,6 +30,7 @@ This project is split on purpose:
 
 ## API Endpoints
 
+- `GET /api/health`
 - `GET /api/personas`
 - `GET /api/personas/{persona_id}`
 - `POST /api/sessions`
@@ -74,6 +75,12 @@ Bridge endpoint soak test (short multithreaded load):
 
 ```powershell
 python .\tools\bridge_soak_test.py
+```
+
+Run regression tests:
+
+```powershell
+python -m unittest -v
 ```
 
 ## Optional Environment Variables

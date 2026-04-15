@@ -49,6 +49,12 @@ function appendMessage(role, text, detail = "") {
 async function loadPersonas() {
   const response = await fetch("/api/personas");
   const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || "Failed to load personas");
+  }
+  if (!Array.isArray(payload.personas)) {
+    throw new Error("Invalid persona payload");
+  }
   state.personas = payload.personas;
   personaSelect.innerHTML = "";
 
@@ -92,6 +98,9 @@ async function createSession() {
   if (!response.ok) {
     throw new Error(payload.error || "Failed to create session");
   }
+  if (typeof payload.session_id !== "string" || !payload.session_id.trim()) {
+    throw new Error("Session response did not include a session_id");
+  }
   state.sessionId = payload.session_id;
   setSessionBanner();
 }
@@ -134,13 +143,36 @@ async function sendMessage(text) {
     }
   }
 
-  if (payload.audio_url) {
+  const audioUrl = resolveAudioUrl(payload);
+  if (audioUrl) {
     if (state.currentAudio) {
       state.currentAudio.pause();
     }
-    state.currentAudio = new Audio(payload.audio_url);
+    state.currentAudio = new Audio(audioUrl);
     state.currentAudio.play().catch(() => {});
   }
+}
+
+function resolveAudioUrl(payload) {
+  if (typeof payload.audio_url === "string" && payload.audio_url.trim()) {
+    return payload.audio_url.trim();
+  }
+
+  if (typeof payload.audio_file_path !== "string" || !payload.audio_file_path.trim()) {
+    return null;
+  }
+
+  const normalized = payload.audio_file_path.trim().replace(/\\/g, "/");
+  if (normalized.startsWith("/audio/")) {
+    return normalized;
+  }
+
+  const pieces = normalized.split("/").filter(Boolean);
+  const fileName = pieces.length ? pieces[pieces.length - 1] : "";
+  if (!fileName) {
+    return null;
+  }
+  return `/audio/${encodeURIComponent(fileName)}`;
 }
 
 function setSending(sending) {

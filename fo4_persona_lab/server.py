@@ -32,6 +32,17 @@ class PersonaRequestHandler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
 
+        if path == "/api/health":
+            self._send_json(
+                {
+                    "status": "ok",
+                    "persona_count": len(SERVICE.list_personas()),
+                    "backend": SETTINGS.backend,
+                    "tts_backend": SETTINGS.tts_backend,
+                }
+            )
+            return
+
         if path == "/api/personas":
             self._send_json({"personas": SERVICE.list_personas()})
             return
@@ -167,6 +178,7 @@ class PersonaRequestHandler(BaseHTTPRequestHandler):
                     "persona_id": result.persona_id,
                     "reply": result.reply,
                     "audio_file_path": result.audio_file_path,
+                    "audio_url": self._audio_url_from_bridge_path(result.audio_file_path),
                     "warnings": result.warnings,
                     "error": result.error,
                 }
@@ -178,7 +190,11 @@ class PersonaRequestHandler(BaseHTTPRequestHandler):
             self._send_json({"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
     def _read_json_body(self) -> dict:
-        content_length = int(self.headers.get("Content-Length", "0"))
+        raw_content_length = self.headers.get("Content-Length", "0")
+        try:
+            content_length = int(raw_content_length)
+        except ValueError as exc:
+            raise ValidationError("Invalid Content-Length header.") from exc
         if content_length <= 0:
             raise ValidationError("Expected a JSON request body.")
         raw = self.rfile.read(content_length)
@@ -265,6 +281,22 @@ class PersonaRequestHandler(BaseHTTPRequestHandler):
             return
 
         self._serve_file(target)
+
+    def _audio_url_from_bridge_path(self, audio_file_path: str | None) -> str | None:
+        if not audio_file_path:
+            return None
+
+        normalized = audio_file_path.strip()
+        if not normalized:
+            return None
+
+        if normalized.startswith("/audio/"):
+            return normalized
+
+        filename = Path(normalized).name
+        if not filename:
+            return None
+        return f"/audio/{urllib.parse.quote(filename)}"
 
     def _serve_file(self, path: Path) -> None:
         if not path.exists() or not path.is_file():

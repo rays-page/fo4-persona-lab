@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 import threading
 import tkinter as tk
 from tkinter import ttk
+import urllib.parse
 
 from .bridge import BridgeChatResult, BridgeGateway
 from .config import load_settings
@@ -229,17 +231,23 @@ class OverlayApp:
         self._append_turn("Persona", response.reply)
         for warning in response.warnings:
             self._append_system(warning)
-        if response.audio_url:
-            self._play_audio_url(response.audio_url)
+        if response.audio_file_path:
+            self._play_audio_reference(response.audio_file_path)
 
-    def _play_audio_url(self, audio_url: str) -> None:
-        if not audio_url.startswith("/audio/"):
-            self._append_system(f"Audio generated at: {audio_url}")
+    def _play_audio_reference(self, audio_file_path: str) -> None:
+        normalized = audio_file_path.strip()
+        if not normalized:
             return
-        path = self.settings.audio_dir / audio_url.removeprefix("/audio/")
+        if normalized.startswith("/audio/"):
+            filename = urllib.parse.unquote(normalized.removeprefix("/audio/"))
+            path = self.settings.audio_dir / filename
+        else:
+            path = Path(normalized)
+            if not path.is_absolute():
+                path = self.settings.audio_dir / path
         self._play_audio(path)
 
-    def _play_audio(self, path) -> None:
+    def _play_audio(self, path: Path) -> None:
         if winsound is None:
             self._append_system(f"Audio generated at: {path}")
             return

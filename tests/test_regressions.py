@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from fo4_persona_lab.config import load_settings
+from fo4_persona_lab.bridge import BridgeChatResult
 from fo4_persona_lab.server import PersonaRequestHandler
 from fo4_persona_lab.service import PersonaService
 
@@ -72,7 +73,31 @@ def run_fake_bridge_server(payload: dict):
         thread.join(timeout=2)
 
 
+@contextmanager
+def patch_server_bridge(fake_bridge: object):
+    import fo4_persona_lab.server as server_module
+
+    original = server_module.BRIDGE
+    server_module.BRIDGE = fake_bridge
+    try:
+        yield
+    finally:
+        server_module.BRIDGE = original
+
+
 class ServerSecurityTests(unittest.TestCase):
+    def test_health_endpoint_reports_ready_status(self) -> None:
+        with run_persona_server() as port:
+            conn = HTTPConnection("127.0.0.1", port, timeout=5)
+            conn.request("GET", "/api/health")
+            response = conn.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+            conn.close()
+
+        self.assertEqual(response.status, HTTPStatus.OK)
+        self.assertEqual(payload.get("status"), "ok")
+        self.assertGreaterEqual(int(payload.get("persona_count", 0)), 1)
+
     def test_audio_path_traversal_is_rejected(self) -> None:
         with run_persona_server() as port:
             conn = HTTPConnection("127.0.0.1", port, timeout=5)
@@ -83,6 +108,71 @@ class ServerSecurityTests(unittest.TestCase):
 
         self.assertEqual(response.status, HTTPStatus.BAD_REQUEST)
         self.assertEqual(payload.get("error"), "Invalid path")
+
+    def test_audio_backslash_traversal_is_rejected(self) -> None:
+        with run_persona_server() as port:
+            conn = HTTPConnection("127.0.0.1", port, timeout=5)
+            conn.request("GET", "/audio/..%5C..%5CREADME.md")
+            response = conn.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+            conn.close()
+
+        self.assertEqual(response.status, HTTPStatus.BAD_REQUEST)
+        self.assertEqual(payload.get("error"), "Invalid path")
+
+    def test_bridge_chat_includes_audio_url_when_audio_file_path_present(self) -> None:
+        class FakeBridge:
+            def submit_player_text(self, request_id: int, persona_id: str, player_text: str, **kwargs):
+                del player_text, kwargs
+                return BridgeChatResult(
+                    request_id=request_id,
+                    accepted=True,
+                    session_id="session-123",
+                    persona_id=persona_id,
+                    reply="Voice line ready.",
+                    audio_file_path=r"C:\tmp\voice test.wav",
+                    warnings=[],
+                )
+
+        body = json.dumps(
+            {
+                "request_id": 77,
+                "persona_id": "steve-jobs",
+                "message": "test",
+            }
+        ).encode("utf-8")
+
+        with patch_server_bridge(FakeBridge()):
+            with run_persona_server() as port:
+                conn = HTTPConnection("127.0.0.1", port, timeout=5)
+                conn.request(
+                    "POST",
+                    "/api/bridge/chat",
+                    body=body,
+                    headers={"Content-Type": "application/json"},
+                )
+                response = conn.getresponse()
+                payload = json.loads(response.read().decode("utf-8"))
+                conn.close()
+
+        self.assertEqual(response.status, HTTPStatus.OK)
+        self.assertEqual(payload.get("audio_file_path"), r"C:\tmp\voice test.wav")
+        self.assertEqual(payload.get("audio_url"), "/audio/voice%20test.wav")
+
+    def test_invalid_content_length_header_is_rejected(self) -> None:
+        with run_persona_server() as port:
+            conn = HTTPConnection("127.0.0.1", port, timeout=5)
+            conn.putrequest("POST", "/api/chat")
+            conn.putheader("Content-Type", "application/json")
+            conn.putheader("Content-Length", "abc")
+            conn.endheaders()
+            conn.send(b"{}")
+            response = conn.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+            conn.close()
+
+        self.assertEqual(response.status, HTTPStatus.BAD_REQUEST)
+        self.assertEqual(payload.get("error"), "Invalid Content-Length header.")
 
 
 class ConcurrencyRegressionTests(unittest.TestCase):

@@ -47,10 +47,16 @@ def wait_for_server(base_url: str, timeout_seconds: float) -> dict:
     last_error: str | None = None
     while time.time() < deadline:
         try:
+            health_status, health = http_json(f"{base_url}/api/health")
+            if health_status != 200 or health.get("status") != "ok":
+                last_error = f"Health check failed: {health_status} {health}"
+                time.sleep(0.1)
+                continue
+
             status, body = http_json(f"{base_url}/api/personas")
             if status == 200 and isinstance(body.get("personas"), list):
                 return body
-            last_error = f"Unexpected status/body: {status} {body}"
+            last_error = f"Unexpected personas status/body: {status} {body}"
         except Exception as exc:  # noqa: BLE001
             last_error = str(exc)
         time.sleep(0.1)

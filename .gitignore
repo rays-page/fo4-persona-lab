@@ -25,3 +25,5 @@ persona_packs/*/*.tiff
 
 .pytest_cache/
 .mypy_cache/
+
+native_bridge/build/
