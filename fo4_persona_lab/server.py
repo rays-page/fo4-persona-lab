@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import json
 import mimetypes
 import threading
@@ -269,13 +269,17 @@ class PersonaRequestHandler(BaseHTTPRequestHandler):
         self._serve_file(target)
 
     def _serve_audio_asset(self, raw_path: str) -> None:
-        normalized = urllib.parse.unquote(raw_path.removeprefix("/audio/")).lstrip("/")
-        if not normalized:
+        decoded = urllib.parse.unquote(raw_path.removeprefix("/audio/"))
+        if not decoded.strip().strip("/\\"):
             self._send_json({"error": "Missing audio path"}, status=HTTPStatus.BAD_REQUEST)
+            return
+        parts = self._safe_audio_path_parts(decoded)
+        if parts is None:
+            self._send_json({"error": "Invalid path"}, status=HTTPStatus.BAD_REQUEST)
             return
 
         audio_root = SETTINGS.audio_dir.resolve()
-        target = (audio_root / normalized).resolve()
+        target = audio_root.joinpath(*parts).resolve()
         if audio_root not in target.parents:
             self._send_json({"error": "Invalid path"}, status=HTTPStatus.BAD_REQUEST)
             return
@@ -291,12 +295,37 @@ class PersonaRequestHandler(BaseHTTPRequestHandler):
             return None
 
         if normalized.startswith("/audio/"):
-            return normalized
+            parts = self._safe_audio_path_parts(normalized.removeprefix("/audio/"))
+            if parts is None:
+                return None
+            return "/audio/" + "/".join(urllib.parse.quote(part) for part in parts)
 
-        filename = Path(normalized).name
+        filename = self._filename_from_any_platform_path(normalized)
         if not filename:
             return None
         return f"/audio/{urllib.parse.quote(filename)}"
+
+    def _safe_audio_path_parts(self, raw_path: str) -> tuple[str, ...] | None:
+        normalized = raw_path.strip().replace("\\", "/").lstrip("/")
+        if not normalized:
+            return None
+
+        parts = tuple(part for part in PurePosixPath(normalized).parts if part not in ("", "."))
+        if not parts:
+            return None
+        if any(part == ".." or ":" in part for part in parts):
+            return None
+        return parts
+
+    def _filename_from_any_platform_path(self, raw_path: str) -> str | None:
+        normalized = raw_path.strip().replace("\\", "/")
+        if not normalized:
+            return None
+
+        filename = PurePosixPath(normalized).name
+        if not filename or filename in {".", ".."} or ":" in filename:
+            return None
+        return filename
 
     def _serve_file(self, path: Path) -> None:
         if not path.exists() or not path.is_file():
