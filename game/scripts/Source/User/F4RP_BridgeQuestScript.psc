@@ -10,6 +10,7 @@ Int Property TextInputMode = 1 Auto ; 0 = Scaleform menu, 1 = external overlay (
 Float Property PollIntervalSeconds = 0.35 Auto
 Int Property MaxResultsPerUpdate = 2 Auto
 Bool Property SpeakReplies = True Auto
+Int Property PollTimerId = 4001 Auto Hidden
 
 Function DebugNotify(String asMessage)
 	If DebugMode
@@ -36,7 +37,7 @@ Function StartConversation(Actor akSpeaker, String asPersonaId)
 
 	ActiveSessionId = ""
 	ConversationOpen = True
-	RegisterForSingleUpdate(PollIntervalSeconds)
+	StartTimer(PollIntervalSeconds, PollTimerId)
 	DebugNotify("typed dialogue requested for " + ActivePersonaId)
 	OpenTypedInputUI()
 EndFunction
@@ -83,15 +84,7 @@ Int Function SubmitPlayerText(String asPlayerText, String asPlayerName = "Sole S
 
 	LastRequestId += 1
 	Int requestId = LastRequestId
-	Bool accepted = F4RP_NativeBridge.SubmitChat(
-		requestId,
-		ActivePersonaId,
-		ActiveSessionId,
-		asPlayerText,
-		asPlayerName,
-		asLocation,
-		SpeakReplies
-	)
+	Bool accepted = F4RP_NativeBridge.SubmitChat(requestId, ActivePersonaId, ActiveSessionId, asPlayerText, asPlayerName, asLocation, SpeakReplies)
 	If !accepted
 		DebugNotify("Native bridge is unavailable. Request " + requestId + " was not sent.")
 	EndIf
@@ -116,13 +109,7 @@ Function PumpNativeBridgeResults()
 
 		Bool success = F4RP_NativeBridge.WasRequestSuccessful(requestId)
 		If success
-			ReceiveGeneratedReply(
-				requestId,
-				F4RP_NativeBridge.GetReplyText(requestId),
-				F4RP_NativeBridge.GetSessionId(requestId),
-				F4RP_NativeBridge.GetAudioFilePath(requestId),
-				F4RP_NativeBridge.GetWarning(requestId)
-			)
+			ReceiveGeneratedReply(requestId, F4RP_NativeBridge.GetReplyText(requestId), F4RP_NativeBridge.GetSessionId(requestId), F4RP_NativeBridge.GetAudioFilePath(requestId), F4RP_NativeBridge.GetWarning(requestId))
 		Else
 			ReceiveBridgeError(requestId, F4RP_NativeBridge.GetError(requestId))
 		EndIf
@@ -132,22 +119,20 @@ Function PumpNativeBridgeResults()
 	EndWhile
 EndFunction
 
-Event OnUpdate()
+Event OnTimer(Int aiTimerID)
+	If aiTimerID != PollTimerId
+		Return
+	EndIf
+
 	If !ConversationOpen
 		Return
 	EndIf
 
 	PumpNativeBridgeResults()
-	RegisterForSingleUpdate(PollIntervalSeconds)
+	StartTimer(PollIntervalSeconds, PollTimerId)
 EndEvent
 
-Function ReceiveGeneratedReply(
-	Int aiRequestId,
-	String asReplyText,
-	String asSessionId = "",
-	String asAudioFilePath = "",
-	String asWarning = ""
-)
+Function ReceiveGeneratedReply(Int aiRequestId, String asReplyText, String asSessionId = "", String asAudioFilePath = "", String asWarning = "")
 	If !ConversationOpen
 		Return
 	EndIf
@@ -174,7 +159,7 @@ Function ReceiveBridgeError(Int aiRequestId, String asError)
 EndFunction
 
 Function CloseConversation()
-	UnregisterForUpdate()
+	CancelTimer(PollTimerId)
 	If TextInputMode == 1
 		NativeBridgeCloseExternalOverlay()
 	EndIf

@@ -1,14 +1,6 @@
 Scriptname F4RP_NativeBridge native Hidden
 
-Bool Function SubmitChat(
-	Int aiRequestId,
-	String asPersonaId,
-	String asSessionId,
-	String asPlayerText,
-	String asPlayerName,
-	String asLocation,
-	Bool abSpeak = True
-) Global Native
+Bool Function SubmitChat(Int aiRequestId, String asPersonaId, String asSessionId, String asPlayerText, String asPlayerName, String asLocation, Bool abSpeak = True) Global Native
 
 Int Function PopCompletedRequestId() Global Native
 Bool Function WasRequestSuccessful(Int aiRequestId) Global Native
