@@ -4,7 +4,7 @@ This tracks the remaining in-game work that cannot be finished from Python or we
 
 ## Prerequisites
 
-- Plugin has `F4RP_BridgeQuest` and `F4RP_BridgeQuestScript` attached.
+- Plugin has `F4RP_BridgeQuest` and `F4RP_BridgeQuestScript` attached. (Done in `F4RPPersonaLab.esp`.)
 - One test persona actor exists in your plugin.
 - Local service is reachable (`python -m fo4_persona_lab.server`).
 

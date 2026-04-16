@@ -24,20 +24,22 @@ python -m fo4_persona_lab.overlay
 
 ## 3. Creation Kit Setup
 
-- Create/open your plugin in Creation Kit.
-- Add quest `F4RP_BridgeQuest`.
-- Attach `F4RP_BridgeQuestScript` source from this repo into your CK scripts flow.
+- Open `F4RPPersonaLab.esp` in Creation Kit.
+- Verify quest `F4RP_BridgeQuest` is present.
+- Verify `F4RP_BridgeQuestScript` is attached on the quest's Scripts tab.
 - Create one dialogue/activator entry point that calls `StartConversation`.
 
 ## 4. Source Deployment (Manual)
 
 Copy only what you intend to test:
 
+- Plugin (`F4RPPersonaLab.esp`) from `game/`
 - Papyrus source (`.psc`) from `game/scripts/Source/User/`
-- Compiled scripts (`.pex`) only after you compile in your local CK/F4SE toolchain
+- Compiled scripts (`.pex`) from `game/scripts/` or after recompiling in your local CK/F4SE toolchain
 
 Recommended destination pattern:
 
+- `<Fallout4>\Data\` for `.esp`
 - `<Fallout4>\Data\Scripts\Source\User\` for `.psc`
 - `<Fallout4>\Data\Scripts\` for `.pex`
 
