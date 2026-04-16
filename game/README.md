@@ -10,6 +10,7 @@ This folder now includes:
 - `scripts/F4RP_BridgeQuestScript.pex` and `scripts/F4RP_NativeBridge.pex`: compiled Papyrus outputs for local testing
 - `plugin-design.md`: Creation Kit record design and runtime flow
 - `install-dev.md`: manual developer install path (no automatic writes to Fallout folders)
+- `in-game-smoke-test.md`: console-driven test path before the F4SE DLL exists
 - `creation-kit-worklist.md`: actionable checklist for remaining CK-only tasks
 
 Still intentionally missing:

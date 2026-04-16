@@ -11,6 +11,7 @@ Float Property PollIntervalSeconds = 0.35 Auto
 Int Property MaxResultsPerUpdate = 2 Auto
 Bool Property SpeakReplies = True Auto
 Int Property PollTimerId = 4001 Auto Hidden
+Bool Property MockBridgeWhenNativeUnavailable = True Auto
 
 Function DebugNotify(String asMessage)
 	If DebugMode
@@ -87,9 +88,24 @@ Int Function SubmitPlayerText(String asPlayerText, String asPlayerName = "Sole S
 	Bool accepted = F4RP_NativeBridge.SubmitChat(requestId, ActivePersonaId, ActiveSessionId, asPlayerText, asPlayerName, asLocation, SpeakReplies)
 	If !accepted
 		DebugNotify("Native bridge is unavailable. Request " + requestId + " was not sent.")
+		If MockBridgeWhenNativeUnavailable
+			ReceiveGeneratedReply(requestId, BuildMockReply(asPlayerText), BuildMockSessionId(), "", "Mock bridge path; no native F4SE DLL loaded.")
+		EndIf
 	EndIf
 
 	Return requestId
+EndFunction
+
+String Function BuildMockReply(String asPlayerText)
+	Return "[mock " + ActivePersonaId + "] I heard: " + asPlayerText
+EndFunction
+
+String Function BuildMockSessionId()
+	If ActiveSessionId != ""
+		Return ActiveSessionId
+	EndIf
+
+	Return "mock-session"
 EndFunction
 
 Bool Function NativeBridgeOpenExternalOverlay(String asPersonaId, String asSessionId)

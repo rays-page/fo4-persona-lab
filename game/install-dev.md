@@ -45,6 +45,7 @@ Recommended destination pattern:
 
 ## 5. Validation Checklist
 
+- Run `in-game-smoke-test.md` from a disposable save.
 - Quest starts and script initializes.
 - Calling `StartConversation` opens the selected typed-input route (external overlay by default).
 - `SubmitTypedTextFromUI` / `SubmitPlayerText` increments request id and reaches your bridge layer.
