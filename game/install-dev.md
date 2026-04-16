@@ -43,6 +43,18 @@ Recommended destination pattern:
 - `<Fallout4>\Data\Scripts\Source\User\` for `.psc`
 - `<Fallout4>\Data\Scripts\` for `.pex`
 
+Or use the guarded local deploy helper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\game\deploy-local.ps1 -EnablePlugin
+```
+
+Preview without changing files:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\game\deploy-local.ps1 -EnablePlugin -WhatIf
+```
+
 ## 5. Validation Checklist
 
 - Run `in-game-smoke-test.md` from a disposable save.
