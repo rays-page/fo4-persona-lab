@@ -72,6 +72,11 @@ Int Function SubmitTypedTextFromUI(String asPlayerText, String asPlayerName = "S
 	Return requestId
 EndFunction
 
+Function SmokeTestMockBridge(String asPlayerText = "Hello from the FO4 Persona Lab smoke test", String asPersonaId = "steve-jobs")
+	StartConversation(Game.GetPlayer(), asPersonaId)
+	SubmitTypedTextFromUI(asPlayerText, "Sole Survivor", "The Commonwealth")
+EndFunction
+
 Int Function SubmitPlayerText(String asPlayerText, String asPlayerName = "Sole Survivor", String asLocation = "The Commonwealth")
 	If !ConversationOpen
 		DebugNotify("Submit ignored because conversation is closed")

@@ -13,6 +13,12 @@ Use this to verify the Creation Kit quest and Papyrus script before the real F4S
 Open the Fallout 4 console and run:
 
 ```text
+cqf F4RP_BridgeQuest SmokeTestMockBridge "Hello from the console smoke test" "steve-jobs"
+```
+
+If you want to exercise the steps separately, run:
+
+```text
 cqf F4RP_BridgeQuest StartConversation player "steve-jobs"
 cqf F4RP_BridgeQuest SubmitTypedTextFromUI "Hello from the console smoke test" "Sole Survivor" "Vault 111"
 ```
