@@ -1,15 +1,13 @@
 # FO4 Persona Lab
-Experiments with LLM-driven NPCs in Fallout 4: giving companions and settlers generated personalities and dialogue instead of fixed scripted lines.
-
-Exploratory, far from a finished mod.
-
-Working prototype for a Fallout 4 real-person NPC mod pipeline:
+Experiments with LLM-driven NPCs in Fallout 4: giving companions and settlers generated personalities and dialogue instead of fixed scripted lines. The prototype covers:
 
 - local dialogue service,
 - typed web client,
 - desktop overlay client,
 - persona pack tooling,
 - and a source-level Fallout bridge contract.
+
+Exploratory, far from a finished mod.
 
 This project is split on purpose:
 
@@ -50,7 +48,7 @@ This project is split on purpose:
 ## Quick Start
 
 ```powershell
-cd C:\Users\raymo_w9whwcn\OneDrive\TT\fo4_persona_lab
+cd fo4-persona-lab
 python -m fo4_persona_lab.server
 ```
 

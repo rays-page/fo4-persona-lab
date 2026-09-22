@@ -53,7 +53,7 @@ Bridge responses now use one audio field for game integration: `audio_file_path`
 ### No CMake Path (Current Recommended)
 
 ```powershell
-cd C:\Users\raymo_w9whwcn\OneDrive\TT\fo4_persona_lab
+cd fo4-persona-lab
 powershell -ExecutionPolicy Bypass -File .\native_bridge\build_smoketest.ps1 -RunSmoke
 ```
 
@@ -62,7 +62,7 @@ This path uses `g++` directly and verifies end-to-end flow against the local Pyt
 ### CMake Path (Optional)
 
 ```powershell
-cd C:\Users\raymo_w9whwcn\OneDrive\TT\fo4_persona_lab\native_bridge
+cd fo4-persona-lab/native_bridge
 cmake -S . -B build
 cmake --build build --config Release
 .\build\Release\f4rp_bridge_smoketest.exe

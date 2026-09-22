@@ -8,7 +8,7 @@ The goal is not to silently edit the user's live Fallout 4 setup. The goal is to
 
 ## Hard Boundaries
 
-- Work only inside `C:\Users\raymo_w9whwcn\OneDrive\TT\fo4_persona_lab`.
+- Work only inside the `fo4-persona-lab` repo checkout.
 - Do not edit `Fallout4Custom.ini`, Vortex state, Steam game files, or any other folder outside this repo.
 - Do not delete generated user data unless explicitly asked.
 - Do not add API keys, tokens, generated voice samples, reference photos, or private data to git.
@@ -176,7 +176,7 @@ Suggested commits:
 ## Suggested First Command Sequence
 
 ```powershell
-cd C:\Users\raymo_w9whwcn\OneDrive\TT\fo4_persona_lab
+cd fo4-persona-lab
 git status --short --branch
 python -m compileall .
 ```
