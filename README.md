@@ -1,4 +1,7 @@
 # FO4 Persona Lab
+Experiments with LLM-driven NPCs in Fallout 4: giving companions and settlers generated personalities and dialogue instead of fixed scripted lines.
+
+Exploratory, far from a finished mod.
 
 Working prototype for a Fallout 4 real-person NPC mod pipeline:
 
